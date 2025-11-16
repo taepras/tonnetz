@@ -525,13 +525,6 @@ class HexGrid {
         // Set color for visual feedback
         const hue = (q * 30 + r * 50) % 360;
         this.cellColors.set(key, `hsla(${hue}, 70%, 50%, 0.5)`);
-        
-        // Auto-fade after a moment if not touched
-        setTimeout(() => {
-            if (this.activeCells.has(key)) {
-                this.stopTone(key);
-            }
-        }, 2000);
     }
     
     stopTone(key) {
