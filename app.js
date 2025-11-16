@@ -390,29 +390,46 @@ class HexGrid {
                 const panSpeed = 5;
                 this.camera.x += (this.joystick.stickX / this.joystick.maxDistance) * panSpeed;
                 this.camera.y += (this.joystick.stickY / this.joystick.maxDistance) * panSpeed;
-                return;
+                continue;
+            }
+            
+            // Handle tile sliding for non-joystick touches
+            const lastTouch = this.touches.get(touch.identifier);
+            if (lastTouch) {
+                const worldPos = this.screenToWorld(touch.clientX, touch.clientY);
+                const currentHex = this.pixelToAxial(worldPos.x, worldPos.y);
+                const currentKey = `${currentHex.q},${currentHex.r}`;
+                const lastKey = `${lastTouch.hex.q},${lastTouch.hex.r}`;
+                
+                // If moved to a different hex, stop old sound and play new one
+                if (currentKey !== lastKey) {
+                    this.stopTone(lastKey);
+                    this.playTone(currentHex.q, currentHex.r);
+                    
+                    // Update touch data with new hex
+                    this.touches.set(touch.identifier, {
+                        x: touch.clientX,
+                        y: touch.clientY,
+                        hex: currentHex
+                    });
+                } else if (this.enablePanZoom) {
+                    // Pan if in same hex
+                    const dx = touch.clientX - lastTouch.x;
+                    const dy = touch.clientY - lastTouch.y;
+                    
+                    this.camera.x += dx / this.camera.zoom;
+                    this.camera.y += dy / this.camera.zoom;
+                    
+                    this.touches.set(touch.identifier, {
+                        x: touch.clientX,
+                        y: touch.clientY,
+                        hex: lastTouch.hex
+                    });
+                }
             }
         }
         
-        if (e.touches.length === 1) {
-            // Single touch - pan
-            const touch = e.touches[0];
-            const lastTouch = this.touches.get(touch.identifier);
-            
-            if (lastTouch && this.enablePanZoom) {
-                const dx = touch.clientX - lastTouch.x;
-                const dy = touch.clientY - lastTouch.y;
-                
-                this.camera.x += dx / this.camera.zoom;
-                this.camera.y += dy / this.camera.zoom;
-                
-                this.touches.set(touch.identifier, {
-                    x: touch.clientX,
-                    y: touch.clientY,
-                    hex: lastTouch.hex
-                });
-            }
-        } else if (e.touches.length === 2 && this.enablePanZoom) {
+        if (e.touches.length === 2 && this.enablePanZoom) {
             // Two touches - pinch zoom and pan
             const touch1 = e.touches[0];
             const touch2 = e.touches[1];
