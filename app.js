@@ -452,7 +452,7 @@ class HexGrid {
         this.stopTone(key);
         
         // Calculate frequency based on hexagon position
-        const baseFreq = 220; // A3
+        const baseFreq = 261.625565; // Middle C (C4)
         const qFreq = Math.pow(1.5, q);
         const rFreq = Math.pow(1.25, r);
         const frequency = baseFreq * qFreq * rFreq;
