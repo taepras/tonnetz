@@ -46,6 +46,9 @@ class HexGrid {
             maxDistance: 40
         };
         
+        // Sound type: 'violin' or 'sine'
+        this.soundType = 'violin';
+        
         this.init();
     }
     
@@ -111,6 +114,30 @@ class HexGrid {
                 e.preventDefault();
                 this.zoomOut();
             });
+        }
+        
+        // Sound toggle button events
+        const soundToggle = document.getElementById('sound-toggle');
+        if (soundToggle) {
+            soundToggle.addEventListener('click', () => this.toggleSound());
+            soundToggle.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.toggleSound();
+            });
+        }
+    }
+    
+    toggleSound() {
+        this.soundType = this.soundType === 'violin' ? 'sine' : 'violin';
+        const soundToggle = document.getElementById('sound-toggle');
+        if (soundToggle) {
+            if (this.soundType === 'violin') {
+                soundToggle.textContent = '🎻';
+                soundToggle.classList.add('active');
+            } else {
+                soundToggle.textContent = '~';
+                soundToggle.classList.remove('active');
+            }
         }
     }
     
@@ -235,8 +262,11 @@ class HexGrid {
         // this.ctx.fillText(`${q},${r}`, x, y);
 
         // Swapped to match new direction: q uses 5/4, r uses 3/2
-        const numerator = (q > 0 ? Math.pow(5, q) : Math.pow(4, -q)) * (r > 0 ? Math.pow(3, r) : Math.pow(2, -r));
-        const denominator = (q > 0 ? Math.pow(4, q) : Math.pow(5, -q)) * (r > 0 ? Math.pow(2, r) : Math.pow(3, -r));
+        const qFreq = Math.pow(1.25, q);
+        const rFreq = Math.pow(1.5, Math.ceil(r / 2)) * Math.pow(0.75, Math.floor(r / 2));
+
+        const numerator = (q > 0 ? Math.pow(5, q) : Math.pow(4, -q)) * (r > 0 ? Math.pow(3, r) : Math.pow(2, Math.ceil(Math.abs(r) / 2) * 3 - (Math.abs(r) % 2 === 1 ? 1 : 0)));
+        const denominator = (q > 0 ? Math.pow(4, q) : Math.pow(5, -q)) * (r > 0 ? Math.pow(2, Math.ceil(r / 2) * 3 - (r % 2 === 1 ? 2 : 0)) : Math.pow(3, -r));
         const simplified = this.simplifyFraction(numerator, denominator);
         const fracText = `${simplified.numerator}/${simplified.denominator}`;
         this.ctx.fillText(fracText, x, y - 5);
@@ -302,22 +332,42 @@ class HexGrid {
         // Check if clicking on a hexagon
         const worldPos = this.screenToWorld(e.clientX, e.clientY);
         const hex = this.pixelToAxial(worldPos.x, worldPos.y);
+        this.currentMouseHex = hex;
         this.playTone(hex.q, hex.r);
     }
     
     handleMouseMove(e) {
-        if (this.isDragging && this.enablePanZoom) {
-            const dx = e.clientX - this.lastMousePos.x;
-            const dy = e.clientY - this.lastMousePos.y;
-            
-            this.camera.x += dx / this.camera.zoom;
-            this.camera.y += dy / this.camera.zoom;
-            
-            this.lastMousePos = { x: e.clientX, y: e.clientY };
+        if (this.isDragging) {
+            if (this.enablePanZoom) {
+                const dx = e.clientX - this.lastMousePos.x;
+                const dy = e.clientY - this.lastMousePos.y;
+                
+                this.camera.x += dx / this.camera.zoom;
+                this.camera.y += dy / this.camera.zoom;
+                
+                this.lastMousePos = { x: e.clientX, y: e.clientY };
+            } else {
+                // Check if moved to different hex
+                const worldPos = this.screenToWorld(e.clientX, e.clientY);
+                const currentHex = this.pixelToAxial(worldPos.x, worldPos.y);
+                const currentKey = `${currentHex.q},${currentHex.r}`;
+                const lastKey = `${this.currentMouseHex.q},${this.currentMouseHex.r}`;
+                
+                if (currentKey !== lastKey) {
+                    this.stopTone(lastKey);
+                    this.playTone(currentHex.q, currentHex.r);
+                    this.currentMouseHex = currentHex;
+                }
+            }
         }
     }
     
     handleMouseUp(e) {
+        if (this.currentMouseHex) {
+            const key = `${this.currentMouseHex.q},${this.currentMouseHex.r}`;
+            this.stopTone(key);
+            this.currentMouseHex = null;
+        }
         this.isDragging = false;
     }
     
@@ -520,28 +570,63 @@ class HexGrid {
         
         // Calculate frequency based on hexagon position
         const baseFreq = 261.625565; // Middle C (C4)
-        // Swapped: q (now northeast) uses 1.25 (5/4), r (now east) uses 1.5 (3/2)
+        // q (northeast) uses 1.25 (5/4)
+        // r (horizontal) alternates between 3/2 and 3/4
         const qFreq = Math.pow(1.25, q);
-        const rFreq = Math.pow(1.5, r);
+        const rFreq = Math.pow(1.5, Math.ceil(r / 2)) * Math.pow(0.75, Math.floor(r / 2));
         const frequency = baseFreq * qFreq * rFreq;
         
-        // Create oscillator
-        const oscillator = this.audioContext.createOscillator();
+        // Create gain node for overall control
         const gainNode = this.audioContext.createGain();
-        
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
-        
         gainNode.gain.setValueAtTime(0, this.audioContext.currentTime);
-        gainNode.gain.linearRampToValueAtTime(0.2, this.audioContext.currentTime + 0.01);
         
-        oscillator.connect(gainNode);
+        const oscillators = [];
+        
+        if (this.soundType === 'violin') {
+            // Violin-like harmonics
+            gainNode.gain.linearRampToValueAtTime(0.15, this.audioContext.currentTime + 0.01);
+            
+            const harmonics = [
+                { ratio: 1, gain: 1.0 },      // Fundamental
+                { ratio: 2, gain: 0.5 },      // 2nd harmonic (octave)
+                { ratio: 3, gain: 0.3 },      // 3rd harmonic (perfect fifth above octave)
+                { ratio: 4, gain: 0.25 },     // 4th harmonic (two octaves)
+                { ratio: 5, gain: 0.15 },     // 5th harmonic
+                { ratio: 6, gain: 0.1 },      // 6th harmonic
+                { ratio: 7, gain: 0.05 }      // 7th harmonic
+            ];
+            
+            harmonics.forEach(harmonic => {
+                const osc = this.audioContext.createOscillator();
+                const harmonicGain = this.audioContext.createGain();
+                
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(frequency * harmonic.ratio, this.audioContext.currentTime);
+                harmonicGain.gain.setValueAtTime(harmonic.gain, this.audioContext.currentTime);
+                
+                osc.connect(harmonicGain);
+                harmonicGain.connect(gainNode);
+                
+                osc.start();
+                oscillators.push(osc);
+            });
+        } else {
+            // Simple sine wave
+            gainNode.gain.linearRampToValueAtTime(0.2, this.audioContext.currentTime + 0.01);
+            
+            const osc = this.audioContext.createOscillator();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(frequency, this.audioContext.currentTime);
+            
+            osc.connect(gainNode);
+            osc.start();
+            oscillators.push(osc);
+        }
+        
         gainNode.connect(this.audioContext.destination);
         
-        oscillator.start();
-        
-        // Store active oscillator
-        this.activeCells.set(key, { oscillator, gainNode });
+        // Store active oscillators
+        this.activeCells.set(key, { oscillators, gainNode });
         
         // Set color for visual feedback
         const hue = (q * 30 + r * 50) % 360;
@@ -551,14 +636,14 @@ class HexGrid {
     stopTone(key) {
         const cell = this.activeCells.get(key);
         if (cell) {
-            const { oscillator, gainNode } = cell;
+            const { oscillators, gainNode } = cell;
             const currentTime = this.audioContext.currentTime;
             
             gainNode.gain.cancelScheduledValues(currentTime);
             gainNode.gain.setValueAtTime(gainNode.gain.value, currentTime);
             gainNode.gain.linearRampToValueAtTime(0, currentTime + 0.1);
             
-            oscillator.stop(currentTime + 0.1);
+            oscillators.forEach(osc => osc.stop(currentTime + 0.1));
             this.activeCells.delete(key);
             
             // Fade out color

@@ -49,7 +49,7 @@
             z-index: 10;
         }
         
-        .zoom-btn {
+        .zoom-btn, .sound-toggle {
             width: 40px;
             height: 40px;
             border-radius: 50%;
@@ -66,7 +66,17 @@
             transition: all 0.2s;
         }
         
-        .zoom-btn:hover {
+        .sound-toggle {
+            font-size: 14px;
+        }
+        
+        .sound-toggle.active {
+            background: rgba(77, 208, 225, 0.2);
+            border-color: #4dd0e1;
+            color: #4dd0e1;
+        }
+        
+        .zoom-btn:hover, .sound-toggle:hover {
             background: rgba(255, 255, 255, 0.2);
             border-color: rgba(255, 255, 255, 0.5);
             color: rgba(255, 255, 255, 0.9);
@@ -82,6 +92,7 @@
 <body>
     <canvas id="canvas"></canvas>
     <div class="zoom-controls">
+        <button class="sound-toggle active" id="sound-toggle" title="Toggle sound type">🎻</button>
         <button class="zoom-btn" id="zoom-in">+</button>
         <button class="zoom-btn" id="zoom-out">−</button>
     </div>
