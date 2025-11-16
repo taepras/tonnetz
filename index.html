@@ -38,14 +38,53 @@
             pointer-events: none;
             z-index: 10;
         }
+        
+        .zoom-controls {
+            position: absolute;
+            left: 20px;
+            bottom: 180px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            z-index: 10;
+        }
+        
+        .zoom-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            color: rgba(255, 255, 255, 0.7);
+            font-size: 24px;
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            user-select: none;
+            transition: all 0.2s;
+        }
+        
+        .zoom-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            border-color: rgba(255, 255, 255, 0.5);
+            color: rgba(255, 255, 255, 0.9);
+        }
+        
+        .zoom-btn:active {
+            background: rgba(77, 208, 225, 0.3);
+            border-color: #4dd0e1;
+            color: #4dd0e1;
+        }
     </style>
 </head>
 <body>
     <canvas id="canvas"></canvas>
-    <!-- <div id="info">
-        🎵 Tap hexagons to play tones<br>
-        🖱️ Drag to pan | Scroll to zoom
-    </div> -->
+    <div class="zoom-controls">
+        <button class="zoom-btn" id="zoom-in">+</button>
+        <button class="zoom-btn" id="zoom-out">−</button>
+    </div>
     <script src="app.js"></script>
 </body>
 </html>

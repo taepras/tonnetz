@@ -14,7 +14,7 @@ class HexGrid {
         };
         
         // Hexagon properties (flat-top orientation)
-        this.baseHexSize = 60;
+        this.baseHexSize = 50;
         this.hexSize = this.baseHexSize; // Will scale with zoom
         this.hexWidth = 2 * this.hexSize;
         this.hexHeight = Math.sqrt(3) * this.hexSize;
@@ -35,7 +35,7 @@ class HexGrid {
         
         // Joystick properties
         this.joystick = {
-            baseX: 100,
+            baseX: 70,
             baseY: window.innerHeight - 100,
             baseRadius: 50,
             stickRadius: 20,
@@ -92,6 +92,36 @@ class HexGrid {
         this.canvas.addEventListener('touchmove', (e) => this.handleTouchMove(e), { passive: false });
         this.canvas.addEventListener('touchend', (e) => this.handleTouchEnd(e), { passive: false });
         this.canvas.addEventListener('touchcancel', (e) => this.handleTouchEnd(e), { passive: false });
+        
+        // Zoom button events
+        const zoomInBtn = document.getElementById('zoom-in');
+        const zoomOutBtn = document.getElementById('zoom-out');
+        
+        if (zoomInBtn) {
+            zoomInBtn.addEventListener('click', () => this.zoomIn());
+            zoomInBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.zoomIn();
+            });
+        }
+        
+        if (zoomOutBtn) {
+            zoomOutBtn.addEventListener('click', () => this.zoomOut());
+            zoomOutBtn.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                this.zoomOut();
+            });
+        }
+    }
+    
+    zoomIn() {
+        const newZoom = Math.min(5, this.camera.zoom * 1.2);
+        this.camera.zoom = newZoom;
+    }
+    
+    zoomOut() {
+        const newZoom = Math.max(0.5, this.camera.zoom * 0.8);
+        this.camera.zoom = newZoom;
     }
     
     // Hexagon math (flat-top orientation)
