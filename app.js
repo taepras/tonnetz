@@ -126,14 +126,20 @@ class HexGrid {
     
     // Hexagon math (flat-top orientation)
     axialToPixel(q, r) {
-        const x = this.baseHexSize * (Math.sqrt(3) * q + Math.sqrt(3) / 2 * r);
-        const y = this.baseHexSize * (3 / 2 * r);
+        // Swapped q and r, and negated q in y to reverse directions (northeast = +q = 5/4)
+        const x = this.baseHexSize * (Math.sqrt(3) * r + Math.sqrt(3) / 2 * q);
+        const y = this.baseHexSize * (3 / 2 * -q);
         return { x, y };
     }
     
     pixelToAxial(x, y) {
-        const q = (Math.sqrt(3) / 3 * x - 1 / 3 * y) / this.baseHexSize;
-        const r = (2 / 3 * y) / this.baseHexSize;
+        // Proper inverse: solve for q and r from the axialToPixel equations
+        // x = baseHexSize * (sqrt(3) * r + sqrt(3)/2 * q)
+        // y = baseHexSize * (3/2 * -q)
+        // From second equation: q = -2y / (3 * baseHexSize)
+        // Substitute into first: x = baseHexSize * (sqrt(3) * r + sqrt(3)/2 * (-2y / (3 * baseHexSize)))
+        const q = (-2 / 3 * y) / this.baseHexSize;
+        const r = (Math.sqrt(3) / 3 * x - Math.sqrt(3) / 2 * (q * this.baseHexSize)) / this.baseHexSize;
         return this.axialRound(q, r);
     }
     
@@ -202,14 +208,23 @@ class HexGrid {
         if (color) {
             this.ctx.fillStyle = color;
             this.ctx.fill();
-        } else if (highlight) {
+        } else if (highlight && !(q === 0 && r === 0)) {
             this.ctx.fillStyle = 'rgba(100, 200, 255, 0.3)';
             this.ctx.fill();
         }
         
         // Stroke
-        this.ctx.strokeStyle = highlight ? '#4dd0e1' : '#2a2a4e';
-        this.ctx.lineWidth = 2;
+        if (q === 0 && r === 0) {
+            // Yellow outline for origin
+            this.ctx.strokeStyle = '#ffeb3b';
+            this.ctx.lineWidth = 3;
+        } else if (highlight) {
+            this.ctx.strokeStyle = '#4dd0e1';
+            this.ctx.lineWidth = 2;
+        } else {
+            this.ctx.strokeStyle = '#2a2a4e';
+            this.ctx.lineWidth = 2;
+        }
         this.ctx.stroke();
         
         // Draw text labels
@@ -219,8 +234,9 @@ class HexGrid {
         this.ctx.textBaseline = 'middle';
         // this.ctx.fillText(`${q},${r}`, x, y);
 
-        const numerator = (q > 0 ? Math.pow(3, q) : Math.pow(2, -q)) * (r > 0 ? Math.pow(5, r) : Math.pow(4, -r));
-        const denominator = (q > 0 ? Math.pow(2, q) : Math.pow(3, -q)) * (r > 0 ? Math.pow(4, r) : Math.pow(5, -r));
+        // Swapped to match new direction: q uses 5/4, r uses 3/2
+        const numerator = (q > 0 ? Math.pow(5, q) : Math.pow(4, -q)) * (r > 0 ? Math.pow(3, r) : Math.pow(2, -r));
+        const denominator = (q > 0 ? Math.pow(4, q) : Math.pow(5, -q)) * (r > 0 ? Math.pow(2, r) : Math.pow(3, -r));
         const simplified = this.simplifyFraction(numerator, denominator);
         const fracText = `${simplified.numerator}/${simplified.denominator}`;
         this.ctx.fillText(fracText, x, y - 5);
@@ -248,14 +264,18 @@ class HexGrid {
         const topLeft = this.screenToWorld(0, 0);
         const bottomRight = this.screenToWorld(this.width, this.height);
         
-        // Calculate range of hexagons to draw (flat-top orientation)
-        const hexSpacingX = this.baseHexSize * Math.sqrt(3);
-        const hexSpacingY = this.baseHexSize * 1.5;
+        // Convert corners to axial coordinates to find range
+        const topLeftHex = this.pixelToAxial(topLeft.x, topLeft.y);
+        const bottomRightHex = this.pixelToAxial(bottomRight.x, bottomRight.y);
+        const topRightHex = this.pixelToAxial(bottomRight.x, topLeft.y);
+        const bottomLeftHex = this.pixelToAxial(topLeft.x, bottomRight.y);
         
-        const minQ = Math.floor(topLeft.x / hexSpacingX) - 2;
-        const maxQ = Math.ceil(bottomRight.x / hexSpacingX) + 2;
-        const minR = Math.floor(topLeft.y / hexSpacingY) - 2;
-        const maxR = Math.ceil(bottomRight.y / hexSpacingY) + 2;
+        // Find min/max with extra margin
+        const margin = 3;
+        const minQ = Math.min(topLeftHex.q, bottomRightHex.q, topRightHex.q, bottomLeftHex.q) - margin;
+        const maxQ = Math.max(topLeftHex.q, bottomRightHex.q, topRightHex.q, bottomLeftHex.q) + margin;
+        const minR = Math.min(topLeftHex.r, bottomRightHex.r, topRightHex.r, bottomLeftHex.r) - margin;
+        const maxR = Math.max(topLeftHex.r, bottomRightHex.r, topRightHex.r, bottomLeftHex.r) + margin;
         
         for (let q = minQ; q <= maxQ; q++) {
             for (let r = minR; r <= maxR; r++) {
@@ -500,8 +520,9 @@ class HexGrid {
         
         // Calculate frequency based on hexagon position
         const baseFreq = 261.625565; // Middle C (C4)
-        const qFreq = Math.pow(1.5, q);
-        const rFreq = Math.pow(1.25, r);
+        // Swapped: q (now northeast) uses 1.25 (5/4), r (now east) uses 1.5 (3/2)
+        const qFreq = Math.pow(1.25, q);
+        const rFreq = Math.pow(1.5, r);
         const frequency = baseFreq * qFreq * rFreq;
         
         // Create oscillator
