@@ -164,9 +164,13 @@ class HexGrid {
         // x = baseHexSize * (sqrt(3) * r + sqrt(3)/2 * q)
         // y = baseHexSize * (3/2 * -q)
         // From second equation: q = -2y / (3 * baseHexSize)
-        // Substitute into first: x = baseHexSize * (sqrt(3) * r + sqrt(3)/2 * (-2y / (3 * baseHexSize)))
+        // Substitute into first and solve for r:
+        // x = baseHexSize * (sqrt(3) * r + sqrt(3)/2 * q)
+        // x / baseHexSize = sqrt(3) * r + sqrt(3)/2 * q
+        // r = (x / baseHexSize - sqrt(3)/2 * q) / sqrt(3)
+        // r = x / (sqrt(3) * baseHexSize) - q/2
         const q = (-2 / 3 * y) / this.baseHexSize;
-        const r = (Math.sqrt(3) / 3 * x - Math.sqrt(3) / 2 * (q * this.baseHexSize)) / this.baseHexSize;
+        const r = (x / (Math.sqrt(3) * this.baseHexSize)) - (q / 2);
         return this.axialRound(q, r);
     }
     
