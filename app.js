@@ -165,10 +165,18 @@ class HexGrid {
     }
     
     resize() {
+        const dpr = window.devicePixelRatio || 1;
+        
+        // Get CSS dimensions
         this.width = window.innerWidth;
         this.height = window.innerHeight;
-        this.canvas.width = this.width;
-        this.canvas.height = this.height;
+        
+        // Set canvas internal resolution to match device pixel ratio
+        this.canvas.width = this.width * dpr;
+        this.canvas.height = this.height * dpr;
+        
+        // Scale context to account for device pixel ratio
+        this.ctx.scale(dpr, dpr);
         
         // Update joystick position
         this.joystick.baseY = this.height - 100;
