@@ -42,7 +42,7 @@
         .zoom-controls {
             position: absolute;
             left: 20px;
-            bottom: 180px;
+            bottom: 140px;
             display: flex;
             flex-direction: column;
             gap: 10px;
@@ -87,6 +87,48 @@
             border-color: #4dd0e1;
             color: #4dd0e1;
         }
+        
+        .joystick-container {
+            position: absolute;
+            left: 20px;
+            bottom: 20px;
+            width: 100px;
+            height: 100px;
+            z-index: 10;
+            pointer-events: none;
+        }
+        
+        .joystick-base {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            pointer-events: all;
+        }
+        
+        .joystick-stick {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.5);
+            border: 2px solid rgba(255, 255, 255, 0.7);
+            transition: background 0.1s, border-color 0.1s;
+            pointer-events: none;
+        }
+        
+        .joystick-stick.active {
+            background: rgba(77, 208, 225, 0.8);
+            border-color: #4dd0e1;
+        }
     </style>
 </head>
 <body>
@@ -95,6 +137,11 @@
         <button class="sound-toggle active" id="sound-toggle" title="Toggle sound type">🎻</button>
         <button class="zoom-btn" id="zoom-in">+</button>
         <button class="zoom-btn" id="zoom-out">−</button>
+    </div>
+    <div class="joystick-container" id="joystick-container">
+        <div class="joystick-base" id="joystick-base">
+            <div class="joystick-stick" id="joystick-stick"></div>
+        </div>
     </div>
     <script src="app.js"></script>
 </body>

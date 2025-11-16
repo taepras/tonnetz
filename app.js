@@ -43,7 +43,9 @@ class HexGrid {
             stickY: 0,
             active: false,
             touchId: null,
-            maxDistance: 40
+            maxDistance: 40,
+            stickElement: null,
+            baseElement: null
         };
         
         // Sound type: 'violin' or 'sine'
@@ -54,8 +56,99 @@ class HexGrid {
     
     init() {
         this.resize();
+        this.initJoystick();
         this.setupEventListeners();
         this.animate();
+    }
+    
+    initJoystick() {
+        this.joystick.stickElement = document.getElementById('joystick-stick');
+        this.joystick.baseElement = document.getElementById('joystick-base');
+        this.joystick.container = document.getElementById('joystick-container');
+        
+        // Add event listeners to joystick
+        if (this.joystick.baseElement) {
+            this.joystick.baseElement.addEventListener('touchstart', (e) => this.handleJoystickTouchStart(e), { passive: false });
+            this.joystick.baseElement.addEventListener('touchmove', (e) => this.handleJoystickTouchMove(e), { passive: false });
+            this.joystick.baseElement.addEventListener('touchend', (e) => this.handleJoystickTouchEnd(e), { passive: false });
+        }
+    }
+    
+    handleJoystickTouchStart(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (e.touches.length > 0) {
+            const touch = e.touches[0];
+            this.joystick.active = true;
+            this.joystick.touchId = touch.identifier;
+            
+            const rect = this.joystick.baseElement.getBoundingClientRect();
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            
+            const dx = touch.clientX - centerX;
+            const dy = touch.clientY - centerY;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance > this.joystick.maxDistance) {
+                const angle = Math.atan2(dy, dx);
+                this.joystick.stickX = Math.cos(angle) * this.joystick.maxDistance;
+                this.joystick.stickY = Math.sin(angle) * this.joystick.maxDistance;
+            } else {
+                this.joystick.stickX = dx;
+                this.joystick.stickY = dy;
+            }
+            
+            this.updateJoystickVisual();
+        }
+    }
+    
+    handleJoystickTouchMove(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        if (!this.joystick.active) return;
+        
+        for (let touch of e.touches) {
+            if (touch.identifier === this.joystick.touchId) {
+                const rect = this.joystick.baseElement.getBoundingClientRect();
+                const centerX = rect.left + rect.width / 2;
+                const centerY = rect.top + rect.height / 2;
+                
+                const dx = touch.clientX - centerX;
+                const dy = touch.clientY - centerY;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                
+                if (distance > this.joystick.maxDistance) {
+                    const angle = Math.atan2(dy, dx);
+                    this.joystick.stickX = Math.cos(angle) * this.joystick.maxDistance;
+                    this.joystick.stickY = Math.sin(angle) * this.joystick.maxDistance;
+                } else {
+                    this.joystick.stickX = dx;
+                    this.joystick.stickY = dy;
+                }
+                
+                // Pan camera based on joystick
+                const panSpeed = 5;
+                this.camera.x -= (this.joystick.stickX / this.joystick.maxDistance) * panSpeed;
+                this.camera.y -= (this.joystick.stickY / this.joystick.maxDistance) * panSpeed;
+                
+                this.updateJoystickVisual();
+                break;
+            }
+        }
+    }
+    
+    handleJoystickTouchEnd(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        this.joystick.active = false;
+        this.joystick.touchId = null;
+        this.joystick.stickX = 0;
+        this.joystick.stickY = 0;
+        this.updateJoystickVisual();
     }
     
     initAudio() {
@@ -79,6 +172,9 @@ class HexGrid {
         
         // Update joystick position
         this.joystick.baseY = this.height - 100;
+        if (this.joystick.container) {
+            this.joystick.container.style.bottom = '100px';
+        }
     }
     
     setupEventListeners() {
@@ -400,19 +496,6 @@ class HexGrid {
         e.preventDefault();
         
         for (let touch of e.changedTouches) {
-            // Check if touch is on joystick
-            const dx = touch.clientX - this.joystick.baseX;
-            const dy = touch.clientY - this.joystick.baseY;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            
-            if (distance <= this.joystick.baseRadius) {
-                this.joystick.active = true;
-                this.joystick.touchId = touch.identifier;
-                this.joystick.stickX = dx;
-                this.joystick.stickY = dy;
-                continue;
-            }
-            
             const worldPos = this.screenToWorld(touch.clientX, touch.clientY);
             const hex = this.pixelToAxial(worldPos.x, worldPos.y);
             
@@ -444,30 +527,8 @@ class HexGrid {
     handleTouchMove(e) {
         e.preventDefault();
         
-        // Handle joystick movement
+        // Handle tile sliding for non-joystick touches
         for (let touch of e.touches) {
-            if (this.joystick.active && touch.identifier === this.joystick.touchId) {
-                const dx = touch.clientX - this.joystick.baseX;
-                const dy = touch.clientY - this.joystick.baseY;
-                const distance = Math.sqrt(dx * dx + dy * dy);
-                
-                if (distance > this.joystick.maxDistance) {
-                    const angle = Math.atan2(dy, dx);
-                    this.joystick.stickX = Math.cos(angle) * this.joystick.maxDistance;
-                    this.joystick.stickY = Math.sin(angle) * this.joystick.maxDistance;
-                } else {
-                    this.joystick.stickX = dx;
-                    this.joystick.stickY = dy;
-                }
-                
-                // Pan camera based on joystick
-                const panSpeed = 5;
-                this.camera.x -= (this.joystick.stickX / this.joystick.maxDistance) * panSpeed;
-                this.camera.y -= (this.joystick.stickY / this.joystick.maxDistance) * panSpeed;
-                continue;
-            }
-            
-            // Handle tile sliding for non-joystick touches
             const lastTouch = this.touches.get(touch.identifier);
             if (lastTouch) {
                 const worldPos = this.screenToWorld(touch.clientX, touch.clientY);
@@ -540,15 +601,6 @@ class HexGrid {
         e.preventDefault();
         
         for (let touch of e.changedTouches) {
-            // Check if joystick was released
-            if (this.joystick.active && touch.identifier === this.joystick.touchId) {
-                this.joystick.active = false;
-                this.joystick.touchId = null;
-                this.joystick.stickX = 0;
-                this.joystick.stickY = 0;
-                continue;
-            }
-            
             const touchData = this.touches.get(touch.identifier);
             if (touchData && touchData.hex) {
                 const key = `${touchData.hex.q},${touchData.hex.r}`;
@@ -657,32 +709,19 @@ class HexGrid {
         }
     }
     
-    // Draw joystick
-    drawJoystick() {
-        this.ctx.save();
-        
-        // Draw base
-        this.ctx.beginPath();
-        this.ctx.arc(this.joystick.baseX, this.joystick.baseY, this.joystick.baseRadius, 0, Math.PI * 2);
-        this.ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
-        this.ctx.fill();
-        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-        this.ctx.lineWidth = 2;
-        this.ctx.stroke();
-        
-        // Draw stick
-        const stickX = this.joystick.baseX + this.joystick.stickX;
-        const stickY = this.joystick.baseY + this.joystick.stickY;
-        
-        this.ctx.beginPath();
-        this.ctx.arc(stickX, stickY, this.joystick.stickRadius, 0, Math.PI * 2);
-        this.ctx.fillStyle = this.joystick.active ? 'rgba(77, 208, 225, 0.8)' : 'rgba(255, 255, 255, 0.5)';
-        this.ctx.fill();
-        this.ctx.strokeStyle = this.joystick.active ? '#4dd0e1' : 'rgba(255, 255, 255, 0.7)';
-        this.ctx.lineWidth = 2;
-        this.ctx.stroke();
-        
-        this.ctx.restore();
+    // Update joystick visual position
+    updateJoystickVisual() {
+        if (this.joystick.stickElement) {
+            const x = this.joystick.stickX;
+            const y = this.joystick.stickY;
+            this.joystick.stickElement.style.transform = `translate(calc(-50% + ${x}px), calc(-50% + ${y}px))`;
+            
+            if (this.joystick.active) {
+                this.joystick.stickElement.classList.add('active');
+            } else {
+                this.joystick.stickElement.classList.remove('active');
+            }
+        }
     }
     
     // Render loop
@@ -697,9 +736,6 @@ class HexGrid {
             const isOrigin = hex.q === 0 && hex.r === 0;
             this.drawHexagon(hex.x, hex.y, hex.q, hex.r, isActive || isOrigin);
         }
-        
-        // Draw joystick
-        this.drawJoystick();
         
         requestAnimationFrame(() => this.animate());
     }
