@@ -388,8 +388,8 @@ class HexGrid {
                 
                 // Pan camera based on joystick
                 const panSpeed = 5;
-                this.camera.x += (this.joystick.stickX / this.joystick.maxDistance) * panSpeed;
-                this.camera.y += (this.joystick.stickY / this.joystick.maxDistance) * panSpeed;
+                this.camera.x -= (this.joystick.stickX / this.joystick.maxDistance) * panSpeed;
+                this.camera.y -= (this.joystick.stickY / this.joystick.maxDistance) * panSpeed;
                 continue;
             }
             
