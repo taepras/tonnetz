@@ -172,10 +172,15 @@ class HexGrid {
 
     resize() {
         const dpr = window.devicePixelRatio || 1;
+        this.dpr = dpr; // Store for coordinate conversion
 
         // Get CSS dimensions
         this.width = window.innerWidth;
         this.height = window.innerHeight;
+
+        // Set canvas CSS size explicitly
+        this.canvas.style.width = `${this.width}px`;
+        this.canvas.style.height = `${this.height}px`;
 
         // Set canvas internal resolution to match device pixel ratio
         this.canvas.width = this.width * dpr;
@@ -379,8 +384,6 @@ class HexGrid {
         // this.ctx.fillText(`${q},${r}`, x, y);
 
         // Swapped to match new direction: q uses 5/4, r uses 3/2
-        // const pitchFraction = pitchInfo.fraction;
-        // const mainText = `${pitchFraction.numerator}/${pitchFraction.denominator}`;
         const mainText = `${pitchInfo.tetPitch}`;
         this.ctx.fillText(mainText, x, y - 5);
 
