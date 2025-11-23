@@ -331,7 +331,7 @@ class HexGrid {
         const baseColor = pitchInfo.color;
 
         // Scale hex size with zoom
-        const scaledSize = this.baseHexSize * this.camera.zoom;
+        const scaledSize = this.baseHexSize * this.camera.zoom - 1;
 
         this.ctx.save();
         this.ctx.beginPath();
@@ -365,20 +365,20 @@ class HexGrid {
         // Stroke
         if (q === 0 && r === 0) {
             // Yellow outline for origin
-            this.ctx.strokeStyle = '#ffeb3b';
+            this.ctx.strokeStyle = '#cccccc';
             this.ctx.lineWidth = 3;
         } else if (highlight) {
-            this.ctx.strokeStyle = '#4dd0e1';
-            this.ctx.lineWidth = 2;
+            this.ctx.strokeStyle = '#ffffff';
+            this.ctx.lineWidth = 3;
         } else {
-            this.ctx.strokeStyle = '#2a2a4e';
-            this.ctx.lineWidth = 2;
+            this.ctx.strokeStyle = '#ffffff00';
+            this.ctx.lineWidth = 0.01;
         }
         this.ctx.stroke();
 
         // Draw text labels
         this.ctx.fillStyle = '#ffffff';
-        this.ctx.font = `${Math.floor(16 * this.camera.zoom)}px sans-serif`;
+        this.ctx.font = `bold ${Math.floor(16 * this.camera.zoom)}px sans-serif`;
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
         // this.ctx.fillText(`${q},${r}`, x, y);
@@ -411,7 +411,7 @@ class HexGrid {
         const frequency = this.getFrequency(q, r);
         const semitones = 12 * Math.log2(frequency / BASE_FREQ);
         const noteInOctave = circleBackSemitone(semitones);
-        const pitchList = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+        const pitchList = ['C', 'C♯/D♭', 'D', 'D♯/E♭', 'E', 'F', 'F♯/G♭', 'G', 'G♯/A♭', 'A', 'A♯/B♭', 'B']
         const closestPitch = pitchList[circleBackSemitone(Math.round(noteInOctave))];
 
         let tetSemitones = Math.ceil(r / 2) * 7 + Math.floor(r / 2) * -5 + q * 4;
@@ -457,7 +457,7 @@ class HexGrid {
     }
 
     // Calculate color based on frequency (chromatic scale)
-    getHexColorFromFrequency(q, r) {
+    getHexColorFromFrequency(q, r, s = 0.8, l = 0.3) {
         const frequency = this.getFrequency(q, r);
 
         // Convert frequency to semitones from C (middle C = 0)
@@ -469,7 +469,7 @@ class HexGrid {
         // Map to hue: 0 semitones (C) = 0° (red), 12 semitones = 360° (back to red)
         const hue = (noteInOctave / 12) * 360;
 
-        return `hsl(${hue}, 80%, 30%)`;
+        return `hsl(${hue}, ${s * 100}%, ${l * 100}%)`;
     }
 
     // Get visible hexagons
@@ -767,7 +767,7 @@ class HexGrid {
 
         // Set color for visual feedback
         const hue = (q * 30 + r * 50) % 360;
-        this.cellColors.set(key, `hsla(${hue}, 70%, 50%, 0.5)`);
+        this.cellColors.set(key, this.getHexColorFromFrequency(q, r, 0.9, 0.7));
     }
 
     stopTone(key) {
