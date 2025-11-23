@@ -373,7 +373,7 @@ class HexGrid {
 
         // Draw text labels
         this.ctx.fillStyle = '#ffffff';
-        this.ctx.font = `${Math.floor(12 * this.camera.zoom)}px sans-serif`;
+        this.ctx.font = `${Math.floor(16 * this.camera.zoom)}px sans-serif`;
         this.ctx.textAlign = 'center';
         this.ctx.textBaseline = 'middle';
         // this.ctx.fillText(`${q},${r}`, x, y);
@@ -381,11 +381,13 @@ class HexGrid {
         // Swapped to match new direction: q uses 5/4, r uses 3/2
         // const pitchFraction = pitchInfo.fraction;
         // const mainText = `${pitchFraction.numerator}/${pitchFraction.denominator}`;
-        const mainText = `${pitchInfo.closestPitch} (${pitchInfo.semitones.toFixed(2)})`;
+        const mainText = `${pitchInfo.tetPitch}`;
         this.ctx.fillText(mainText, x, y - 5);
 
         this.ctx.fillStyle = '#ffffff66';
-        this.ctx.fillText(`${pitchInfo.drift > 0 ? '+' : ''}${pitchInfo.drift.toFixed(2)} c`, x, y + 12);
+        this.ctx.font = `${Math.floor(12 * this.camera.zoom)}px sans-serif`;
+        // this.ctx.fillText(`${pitchInfo.tetSemitones} ${pitchInfo.semitones.toFixed(2)}`, x, y + 14);
+        this.ctx.fillText(`${pitchInfo.drift > 0 ? '+' : ''}${(pitchInfo.drift * 100).toFixed(0)} c`, x, y + 14);
 
         this.ctx.restore();
     }
@@ -399,7 +401,7 @@ class HexGrid {
         };
     }
 
-    getPitchInfo(q, r) {
+    getPitchInfo(q, r, constrainOctave = true) {
 
         const circleBackSemitone = x => ((x % 12) + 12) % 12;
 
@@ -409,12 +411,21 @@ class HexGrid {
         const pitchList = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
         const closestPitch = pitchList[circleBackSemitone(Math.round(noteInOctave))];
 
+        let tetSemitones = Math.ceil(r / 2) * 7 + Math.floor(r / 2) * -5 + q * 4;
+        if (constrainOctave) {
+            while (tetSemitones < -0.8) tetSemitones += 12;
+            while (tetSemitones >= 11.8) tetSemitones -= 12;
+        }
+        const tetPitch = pitchList[circleBackSemitone(tetSemitones)];
+
         return {
             frequency: frequency,
             fraction: this.getFrequencyFraction(q, r),
             semitones: noteInOctave,
             closestPitch: closestPitch,
-            drift: semitones - Math.round(semitones),
+            tetSemitones: tetSemitones,
+            tetPitch: tetPitch,
+            drift: semitones - tetSemitones, //Math.round(semitones),
             color: this.getHexColorFromFrequency(q, r),
         }
     }
